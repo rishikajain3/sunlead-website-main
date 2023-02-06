@@ -1,0 +1,54 @@
+name: production_on_push
+
+on:
+  push:
+    branches:
+      - main
+
+concurrency:
+  group: ci-production-${{ github.event.ref }}
+  cancel-in-progress: true
+
+jobs:
+  production_backend:
+    uses: jalantechnologies/platform-github/.github/workflows/kube.yml@v2.5
+    with:
+      app_name: website-backend
+      app_env: production
+      app_hostname: 'api.getsunlead.com'
+      branch: ${{ github.event.ref }}
+      build_args: |
+        CI=true
+        NODE_ENV=production
+      build_context: 'api'
+      deploy_root: 'lib/kube/backend'
+      steps: 'deploy'
+    secrets:
+      docker_registry: docker-registry.getsunlead.com/website
+      docker_username: ${{ secrets.DOCKER_USERNAME }}
+      docker_password: ${{ secrets.DOCKER_PASSWORD }}
+      doppler_token: ${{ secrets.DOPPLER_PRODUCTION_TOKEN }}
+      do_access_token: ${{ secrets.DO_ACCESS_TOKEN }}
+      do_cluster_id: ${{ secrets.DO_CLUSTER_ID }}
+
+  production_frontend:
+    uses: jalantechnologies/platform-github/.github/workflows/kube.yml@v2.5
+    needs: 'production_backend'
+    with:
+      app_name: website-frontend
+      app_env: production
+      app_hostname: 'getsunlead.com'
+      branch: ${{ github.event.ref }}
+      build_args: |
+        CI=true
+        NODE_ENV=production
+        STRAPI_API_URL=${{ needs.production_backend.outputs.deploy_url }}
+        STRAPI_TOKEN=d9e60d20aed09035641e1f78c044508ded1cc0802ea069b5b93abc8796c54809f4b33a170bc7835bd945c382fd979cda98ab395ce9692fdb3689637970a37e690aa5e5218efb19d76c5fa7a279988949d9d7e9e756400d05cea402b376dbb3576ef2a4d4c7ef85da54f540f2f90a23cee277eff2c2678e7d268442d395b19895
+      deploy_root: 'lib/kube/frontend'
+      steps: 'deploy'
+    secrets:
+      docker_registry: docker-registry.getsunlead.com/website
+      docker_username: ${{ secrets.DOCKER_USERNAME }}
+      docker_password: ${{ secrets.DOCKER_PASSWORD }}
+      do_access_token: ${{ secrets.DO_ACCESS_TOKEN }}
+      do_cluster_id: ${{ secrets.DO_CLUSTER_ID }}

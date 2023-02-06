@@ -1,0 +1,27 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: $KUBE_APP-www-ingress
+  namespace: $KUBE_NS
+  labels:
+    app: $KUBE_APP
+  annotations:
+    nginx.ingress.kubernetes.io/rewrite-target: /
+    cert-manager.io/cluster-issuer: letsencrypt-prod
+spec:
+  ingressClassName: nginx
+  tls:
+    - hosts:
+        - www.$KUBE_INGRESS_HOSTNAME
+      secretName: $KUBE_APP-www-cert-key
+  rules:
+    - host: www.$KUBE_INGRESS_HOSTNAME
+      http:
+        paths:
+          - pathType: Prefix
+            path: "/"
+            backend:
+              service:
+                name: $KUBE_APP-service
+                port:
+                  number: 9000
